@@ -113,7 +113,8 @@ const routes = {
     const url = new URL(req.url, `http://${HOST}:${PORT}`);
     const key = url.searchParams.get("canonicalKey");
     if (!key) return json(res, 400, { error: "canonicalKey required" });
-    const record = getByCanonicalKey(db, key);
+    const sessionKey = url.searchParams.get("sessionKey") ?? undefined;
+    const record = getByCanonicalKey(db, key, sessionKey);
     json(res, record ? 200 : 404, record ?? { error: "not found" });
   },
 

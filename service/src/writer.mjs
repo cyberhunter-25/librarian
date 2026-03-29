@@ -18,6 +18,8 @@ function defaultDecay(kind) {
   return d.toISOString();
 }
 
+const ISO8601_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/;
+
 export function validate(input) {
   const errors = [];
   if (!nonEmpty(input.proposalId)) errors.push({ field: "proposalId", message: "required" });
@@ -30,6 +32,28 @@ export function validate(input) {
   if (input.sourceType && !VALID_SOURCE_TYPES.has(input.sourceType)) errors.push({ field: "sourceType", message: `invalid: ${input.sourceType}` });
   if (SINGLETON_KINDS.has(input.kind) && !nonEmpty(input.canonicalKey)) errors.push({ field: "canonicalKey", message: `required for ${input.kind}` });
   if (input.accessScope === "session" && !nonEmpty(input.sessionKey)) errors.push({ field: "sessionKey", message: "required for session scope" });
+  // Validate proposedDecayAt as ISO-8601 if provided
+  if (input.proposedDecayAt != null) {
+    const s = String(input.proposedDecayAt);
+    if (!ISO8601_RE.test(s) || isNaN(Date.parse(s))) {
+      errors.push({ field: "proposedDecayAt", message: "must be valid ISO-8601 datetime" });
+    }
+  }
+  // Validate evidence items have non-empty type
+  if (input.evidence != null) {
+    if (!Array.isArray(input.evidence)) {
+      errors.push({ field: "evidence", message: "must be an array" });
+    } else {
+      for (let i = 0; i < input.evidence.length; i++) {
+        const item = input.evidence[i];
+        if (!item || typeof item !== "object") {
+          errors.push({ field: `evidence[${i}]`, message: "must be an object" });
+        } else if (!nonEmpty(item.type)) {
+          errors.push({ field: `evidence[${i}].type`, message: "required" });
+        }
+      }
+    }
+  }
   return errors.length > 0 ? { valid: false, errors } : { valid: true, errors: [] };
 }
 
@@ -83,8 +107,8 @@ export function acceptProposal(db, proposalRowId, opts = {}) {
 
     if (SINGLETON_KINDS.has(kind)) {
       const existing = db.prepare(
-        `SELECT id FROM memories WHERE canonical_key = ? AND status = 'active' AND kind IN ('task_state','project_fact','operating_policy')`
-      ).get(canonicalKey);
+        `SELECT id FROM memories WHERE canonical_key = ? AND kind = ? AND status = 'active'`
+      ).get(canonicalKey, kind);
       if (existing) {
         supersededMemoryId = existing.id;
         db.prepare(`UPDATE memories SET status = 'superseded', superseded_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?`).run(supersededMemoryId);

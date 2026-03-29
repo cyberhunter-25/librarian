@@ -130,7 +130,8 @@ export function ensureSchema(db, workspaceId) {
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_mp_dedupe_key ON memory_proposals(dedupe_key) WHERE dedupe_key IS NOT NULL`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mp_status ON memory_proposals(status, created_at)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mp_subject ON memory_proposals(subject_key, kind, created_at)`);
-  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_mem_active_singleton ON memories(canonical_key) WHERE status = 'active' AND kind IN (${sqlList(SINGLETON_KINDS)})`);
+  db.exec(`DROP INDEX IF EXISTS idx_mem_active_singleton`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_mem_active_singleton ON memories(canonical_key, kind) WHERE status = 'active' AND kind IN (${sqlList(SINGLETON_KINDS)})`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mem_status_kind ON memories(status, kind, created_at DESC)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mem_subject ON memories(subject_key, status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_mem_canonical ON memories(canonical_key, status)`);
@@ -144,6 +145,14 @@ export function ensureSchema(db, workspaceId) {
   db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`).run("governed_memory_schema_version", String(SCHEMA_VERSION));
   if (workspaceId?.trim()) {
     db.prepare(`INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)`).run("workspace_id", workspaceId.trim());
+    // Verify the DB belongs to the configured workspace — fail closed on mismatch
+    const existing = db.prepare(`SELECT value FROM meta WHERE key = 'workspace_id'`).get();
+    if (existing && existing.value !== workspaceId.trim()) {
+      throw new Error(
+        `Workspace identity mismatch: DB has '${existing.value}' but service configured with '${workspaceId.trim()}'. ` +
+        `Refusing to start — check LIBRARIAN_DB_PATH.`
+      );
+    }
   }
 }
 

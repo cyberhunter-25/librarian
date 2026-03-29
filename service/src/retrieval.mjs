@@ -35,12 +35,13 @@ export function query(db, q = {}) {
     const scopes = scopesAtOrAbove(q.accessScope);
     conditions.push(`access_scope IN (${scopes.map(() => "?").join(",")})`);
     params.push(...scopes);
-    if (q.sessionKey) {
-      conditions.push(`(access_scope != 'session' OR session_key = ?)`);
-      params.push(q.sessionKey);
-    } else {
-      conditions.push("access_scope != 'session'");
-    }
+  }
+  // Session-scoped memories require an explicit matching sessionKey — always enforced
+  if (q.sessionKey) {
+    conditions.push(`(access_scope != 'session' OR session_key = ?)`);
+    params.push(q.sessionKey);
+  } else {
+    conditions.push("access_scope != 'session'");
   }
   if (q.kinds?.length) {
     conditions.push(`kind IN (${q.kinds.map(() => "?").join(",")})`);
@@ -51,27 +52,43 @@ export function query(db, q = {}) {
     params.push(q.minConfidence);
   }
 
+  // Key parameters filter results (WHERE), not just reorder them
+  if (q.canonicalKey) {
+    conditions.push("canonical_key = ?");
+    params.push(q.canonicalKey);
+  }
+  if (q.subjectKey) {
+    conditions.push("subject_key = ?");
+    params.push(q.subjectKey);
+  }
+
   const order = [];
-  if (q.canonicalKey) { order.push("CASE WHEN canonical_key = ? THEN 0 ELSE 1 END"); params.push(q.canonicalKey); }
-  if (q.subjectKey) { order.push("CASE WHEN subject_key = ? THEN 0 ELSE 1 END"); params.push(q.subjectKey); }
-  order.push("created_at DESC");
+  order.push("confidence DESC", "created_at DESC");
 
   params.push(limit);
   const sql = `SELECT ${COLUMNS} FROM memories WHERE ${conditions.join(" AND ")} ORDER BY ${order.join(", ")} LIMIT ?`;
   return db.prepare(sql).all(...params).map(toRecord);
 }
 
-export function getByCanonicalKey(db, canonicalKey) {
+export function getByCanonicalKey(db, canonicalKey, sessionKey) {
+  if (sessionKey) {
+    const row = db.prepare(
+      `SELECT ${COLUMNS} FROM memories WHERE canonical_key = ? AND status = 'active' AND (decay_at IS NULL OR decay_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) AND (access_scope != 'session' OR session_key = ?) LIMIT 1`
+    ).get(canonicalKey, sessionKey);
+    return row ? toRecord(row) : null;
+  }
   const row = db.prepare(
-    `SELECT ${COLUMNS} FROM memories WHERE canonical_key = ? AND status = 'active' AND (decay_at IS NULL OR decay_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) LIMIT 1`
+    `SELECT ${COLUMNS} FROM memories WHERE canonical_key = ? AND status = 'active' AND access_scope != 'session' AND (decay_at IS NULL OR decay_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')) LIMIT 1`
   ).get(canonicalKey);
   return row ? toRecord(row) : null;
 }
 
 export function getHistory(db, canonicalKey) {
+  // History returns all statuses (active, superseded, archived, expired) for audit,
+  // but session-scoped memories are excluded since history is not session-contextualized.
   const rows = db.prepare(
     `WITH RECURSIVE history AS (
-      SELECT ${COLUMNS}, 0 AS depth FROM memories WHERE canonical_key = ? AND status = 'active'
+      SELECT ${COLUMNS}, 0 AS depth FROM memories WHERE canonical_key = ? AND status = 'active' AND access_scope != 'session'
       UNION ALL
       SELECT ${COLUMNS.split(",").map(c => `m.${c.trim()}`).join(",")}, history.depth + 1 AS depth
       FROM memories m JOIN history ON history.supersedes_memory_id = m.id
@@ -82,6 +99,6 @@ export function getHistory(db, canonicalKey) {
   if (rows.length > 0) return rows.map(toRecord);
 
   return db.prepare(
-    `SELECT ${COLUMNS} FROM memories WHERE canonical_key = ? ORDER BY created_at DESC, id DESC`
+    `SELECT ${COLUMNS} FROM memories WHERE canonical_key = ? AND access_scope != 'session' ORDER BY created_at DESC, id DESC`
   ).all(canonicalKey).map(toRecord);
 }
