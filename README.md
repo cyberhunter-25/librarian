@@ -117,30 +117,30 @@ Librarian is designed for fleet deployment. Each instance is fully independent �
 Think of each Librarian instance as a **brain** for a specific scope of concern:
 
 ```
-┌──────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────┐
 │                    Organization                       │
 │                                                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
-│  │  Shared Brain│  │  Shared Brain│  │  Shared Brain│  │
-│  │  (Company)   │  │  (Infra)    │  │  (Legal)    │  │
-│  │  Port 9700   │  │  Port 9701  │  │  Port 9702  │  │
-│  │              │  │             │  │             │  │
-│  │  Policies,   │  │  Runbooks,  │  │  Compliance │  │
-│  │  org facts,  │  │  topology,  │  │  rules,     │  │
-│  │  culture     │  │  incidents  │  │  precedents │  │
-│  └──────────────┘  └─────────────┘  └─────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐ ┌──────────────┐  │
+│  │  Shared Brain│  │  Shared Brain│ │  Shared Brain│  │
+│  │  (Company)   │  │  (Infra)     │ │  (Legal)     │  │
+│  │  Port 9700   │  │  Port 9701   │ │  Port 9702   │  │
+│  │              │  │              │ │              │  │
+│  │  Policies,   │  │  Runbooks,   │ │  Compliance  │  │
+│  │  org facts,  │  │  topology,   │ │  rules,      │  │
+│  │  culture     │  │  incidents   │ │  precedents  │  │
+│  └──────────────┘  └──────────────┘ └──────────────┘  │
 │                                                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │
-│  │ Distinct     │  │ Distinct     │  │ Distinct     │  │
-│  │ Brain        │  │ Brain        │  │ Brain        │  │
-│  │ (Sales Team) │  │ (Eng Team)  │  │ (SOC Team)  │  │
-│  │ Port 9710   │  │ Port 9711   │  │ Port 9712   │  │
-│  │              │  │             │  │             │  │
-│  │ Deals, CRM  │  │ Sprint      │  │ Cases,      │  │
-│  │ contacts,   │  │ context,    │  │ triage,     │  │
-│  │ proposals   │  │ tech debt   │  │ IOCs        │  │
-│  └──────────────┘  └─────────────┘  └─────────────┘  │
-└──────────────────────────────────────────────────────┘
+│  ┌──────────────┐  ┌─────────────┐  ┌─────────────┐   │
+│  │ Distinct     │  │ Distinct    │  │ Distinct    │   │
+│  │ Brain        │  │ Brain       │  │ Brain       │   │
+│  │ (Sales Team) │  │ (Eng Team)  │  │ (SOC Team)  │   │
+│  │ Port 9710    │  │ Port 9711   │  │ Port 9712   │   │
+│  │              │  │             │  │             │   │
+│  │ Deals, CRM   │  │ Sprint      │  │ Cases,      │   │
+│  │ contacts,    │  │ context,    │  │ triage,     │   │
+│  │ proposals    │  │ tech debt   │  │ IOCs        │   │
+│  └──────────────┘  └─────────────┘  └─────────────┘   │
+└───────────────────────────────────────────────────────┘
 ```
 
 **Shared Brains** hold knowledge that multiple teams or agents need:
