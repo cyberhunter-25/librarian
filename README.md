@@ -410,4 +410,4 @@ MIT
 
 ## Credits
 
-Designed by CyberHunter Solutions. Built collaboratively by Dennis Odunski, Claude (Anthropic), and Codex (OpenAI).
+Designed by CyberHunter Solutions. Built collaboratively by Dennis Jax, Claude (Anthropic), and Codex (OpenAI).
