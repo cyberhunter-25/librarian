@@ -1,0 +1,13 @@
+{
+  "name": "governed-memory",
+  "version": "1.0.0",
+  "description": "Governed memory service for OpenClaw - standalone HTTP API",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node --experimental-sqlite src/server.mjs",
+    "test": "node --experimental-sqlite --test src/*.test.mjs"
+  }
+}
